@@ -31,22 +31,22 @@ with new_events_session_ids as (
   select
     e.domain_sessionid as session_id,
     max(e.domain_userid) as domain_userid, -- Edge case 1: Arbitary selection to avoid window function like first_value.
-    min(e.collector_tstamp) as start_tstamp,
-    max(e.collector_tstamp) as end_tstamp
+    timestamp(min(e.collector_tstamp)) as start_tstamp,
+    timestamp(max(e.collector_tstamp)) as end_tstamp
 
   from {{ var('snowplow__events') }} e
 
   where
     e.domain_sessionid is not null
     and not exists (select 1 from {{ ref('snowplow_web_base_quarantined_sessions') }} as a where a.session_id = e.domain_sessionid) -- don't continue processing v.long sessions
-    and e.dvce_sent_tstamp <= {{ snowplow_utils.timestamp_add('day', var("snowplow__days_late_allowed", 3), 'dvce_created_tstamp') }} -- don't process data that's too late
-    and e.collector_tstamp >= {{ lower_limit }}
-    and e.collector_tstamp <= {{ upper_limit }}
+    and timestamp(e.dvce_sent_tstamp) <= {{ snowplow_utils.timestamp_add('day', var("snowplow__days_late_allowed", 3), 'timestamp(dvce_created_tstamp)') }} -- don't process data that's too late
+    and timestamp(e.collector_tstamp) >= {{ lower_limit }}
+    and timestamp(e.collector_tstamp) <= {{ upper_limit }}
     and {{ snowplow_utils.app_id_filter(var("snowplow__app_id",[])) }}
     and {{ is_run_with_new_events }} --don't reprocess sessions that have already been processed.
     {% if var('snowplow__derived_tstamp_partitioned', true) and target.type == 'bigquery' | as_bool() %} -- BQ only
-      and e.derived_tstamp >= {{ lower_limit }}
-      and e.derived_tstamp <= {{ upper_limit }}
+      and timestamp(e.derived_tstamp) >= {{ lower_limit }}
+      and timestamp(e.derived_tstamp) <= {{ upper_limit }}
     {% endif %}
 
   group by 1

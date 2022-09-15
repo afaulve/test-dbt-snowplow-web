@@ -21,10 +21,10 @@ select
   ev.domain_sessionidx,
 
   -- timestamp fields
-  ev.dvce_created_tstamp,
-  ev.collector_tstamp,
-  ev.derived_tstamp,
-  ev.derived_tstamp as start_tstamp,
+  timestamp(ev.dvce_created_tstamp) dvce_created_tstamp,
+  timestamp(ev.collector_tstamp) collector_tstamp,
+  timestamp(ev.derived_tstamp) derived_tstamp,
+  timestamp(ev.derived_tstamp) as start_tstamp,
 
   ev.doc_width,
   ev.doc_height,
